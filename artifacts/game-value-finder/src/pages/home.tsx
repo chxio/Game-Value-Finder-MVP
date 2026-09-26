@@ -45,6 +45,14 @@ const platforms = [
   { value: GamePlatform.PlayStation, label: 'PlayStation', icon: Tv },
 ] as const;
 
+type SortOrder = 'value' | 'price' | 'discount' | 'rating';
+const sortLabels: Record<SortOrder, string> = {
+  value: 'Highest value',
+  price: 'Price: low to high',
+  discount: 'Biggest discount',
+  rating: 'Highest rating',
+};
+
 function formatMoney(value: number, currency: string) {
   try {
     return new Intl.NumberFormat(undefined, {
@@ -89,18 +97,18 @@ function GameArtwork({ game }: { game: Game }) {
       <img
         src={game.imageUrl}
         alt={`${game.name} cover art`}
-        className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         data-testid={`img-game-${game.id}`}
         onError={(event) => {
           event.currentTarget.style.display = 'none';
         }}
       />
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#111827]/70 to-transparent" />
-      <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-[#111827]/75 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[.13em] text-white backdrop-blur-sm">
+      <div className="absolute left-3 top-3 flex items-center gap-1.5 border border-[#aaf36b]/60 bg-[#0b101d]/90 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[.13em] text-white backdrop-blur-sm">
         <Zap className="h-3 w-3 text-[#dfff47]" aria-hidden="true" />
         value pick
       </div>
-      <div className="absolute bottom-3 right-3 rounded-md bg-[#111827]/75 px-2 py-1 font-mono text-[10px] text-white/90 backdrop-blur-sm">
+      <div className="absolute bottom-3 right-3 border border-white/30 bg-[#0b101d]/90 px-2 py-1 font-mono text-[10px] text-white/90 backdrop-blur-sm">
         {game.platform}
       </div>
     </div>
@@ -111,7 +119,7 @@ function GameCard({ game, index, priceCapturedAt }: { game: Game; index: number;
   const isDealLink = game.provider.includes('CheapShark');
   return (
     <article
-      className="group gvf-rise overflow-hidden rounded-2xl border border-[#dce2ec] bg-white shadow-[0_8px_25px_rgba(31,42,63,.045)] transition duration-300 hover:-translate-y-1 hover:border-[#bac5d5] hover:shadow-[0_18px_38px_rgba(31,42,63,.12)]"
+      className="group gvf-rise overflow-hidden border bg-white transition-transform duration-300 hover:-translate-y-1"
       style={{ animationDelay: `${index * 55}ms` }}
       data-testid={`card-game-${game.id}`}
     >
@@ -122,11 +130,11 @@ function GameCard({ game, index, priceCapturedAt }: { game: Game; index: number;
             <p className="mb-1 truncate font-mono text-[10px] uppercase tracking-[.16em] text-[#8490a5]">
               {game.provider}
             </p>
-            <h3 className="truncate text-[17px] font-extrabold tracking-[-.035em] text-[#1e2940]" data-testid={`text-game-name-${game.id}`}>
+            <h3 className="line-clamp-2 min-h-[3rem] text-[17px] font-extrabold leading-snug tracking-[-.035em] text-[#1e2940]" data-testid={`text-game-name-${game.id}`}>
               {game.name}
             </h3>
           </div>
-          <div className={`shrink-0 rounded-lg px-2 py-1 text-center ${scoreTone(game.dopeScore)}`}>
+            <div className={`shrink-0 px-2 py-1 text-center ${scoreTone(game.dopeScore)}`}>
             <div className="font-mono text-[9px] font-bold uppercase tracking-[.1em]">DOPE</div>
             <div className="text-lg font-extrabold leading-none" data-testid={`text-score-${game.id}`}>{game.dopeScore.toFixed(1)}</div>
           </div>
@@ -283,7 +291,7 @@ function EmptyPanel({ type, onClear, sourceUrl }: { type: 'unavailable' | 'empty
       </div>
       <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-[#7d8799]">no matches</p>
       <h2 className="gvf-display text-2xl font-bold text-[#27334b]">No verified deals matched.</h2>
-      <p className="mt-2 max-w-md text-sm leading-relaxed text-[#7d8799]">Only discounted paid games with storefront ratings appear here. Try a broader title or clear the genre filter.</p>
+      <p className="mt-2 max-w-md text-sm leading-relaxed text-[#7d8799]">Only discounted paid games with storefront ratings appear here. Try broader filters or load another verified PC page.</p>
       {onClear && (
         <button type="button" onClick={onClear} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#202a40] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#303d58]" data-testid="button-clear-filters">
           <X className="h-3.5 w-3.5" aria-hidden="true" /> Clear filters
@@ -297,15 +305,16 @@ function Home() {
   const [platform, setPlatform] = useState<GamePlatform>(GamePlatform.PC);
   const [search, setSearch] = useState('');
   const [genre, setGenre] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [minDiscount, setMinDiscount] = useState('');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('value');
   const [requestedPage, setRequestedPage] = useState<number | null>(null);
   const [loadedPages, setLoadedPages] = useState<PcDealPage[]>([]);
 
   const catalogParams = useMemo(() => ({
     platform,
     region: 'US',
-    genre: genre || undefined,
-    search: search.trim() || undefined,
-  }), [genre, platform, search]);
+  }), [platform]);
 
   const catalog = useGetGameCatalog(catalogParams, {
     query: { queryKey: getGetGameCatalogQueryKey(catalogParams) },
@@ -328,17 +337,30 @@ function Home() {
 
   const games = useMemo(() => {
     const snapshot = catalog.data?.games ?? [];
-    if (platform !== GamePlatform.PC) return snapshot;
     const seen = new Set(snapshot.map((game) => game.id));
-    const additional = loadedPages.flatMap((page) => page.games).filter((game) => {
+    const additional = (platform === GamePlatform.PC ? [...loadedPages].sort((a, b) => a.page - b.page) : [])
+      .flatMap((page) => page.games).filter((game) => {
       if (seen.has(game.id)) return false;
       seen.add(game.id);
-      return (!genre || genre === 'All' || game.genre.includes(genre)) &&
-        (!search.trim() || game.name.toLowerCase().includes(search.trim().toLowerCase()));
+      return true;
     });
-    return [...snapshot, ...additional].sort((a, b) => b.dopeScore - a.dopeScore);
-  }, [catalog.data?.games, genre, loadedPages, platform, search]);
-  const latestPage = loadedPages.at(-1);
+    const query = search.trim().toLocaleLowerCase();
+    const filtered = [...snapshot, ...additional].filter((game) =>
+      (!query || game.name.toLocaleLowerCase().includes(query)) &&
+      (!genre || game.genre.includes(genre)) &&
+      (!maxPrice || game.currentPrice <= Number(maxPrice)) &&
+      (!minDiscount || game.discountPercent >= Number(minDiscount))
+    );
+    return filtered.map((game, index) => ({ game, index })).sort((a, b) => {
+      const difference = sortOrder === 'price' ? a.game.currentPrice - b.game.currentPrice
+        : sortOrder === 'discount' ? b.game.discountPercent - a.game.discountPercent
+        : sortOrder === 'rating' ? b.game.ratingOutOfFive - a.game.ratingOutOfFive
+        : b.game.dopeScore - a.game.dopeScore;
+      return difference || a.index - b.index;
+    }).map(({ game }) => game);
+  }, [catalog.data?.games, genre, loadedPages, maxPrice, minDiscount, platform, search, sortOrder]);
+  const latestPage = loadedPages.reduce<PcDealPage | undefined>((latest, page) =>
+    !latest || page.page > latest.page ? page : latest, undefined);
   const sources = platform === GamePlatform.PC && latestPage
     ? [...(catalog.data?.sources ?? []), ...latestPage.sources.slice(0, 2)]
     : catalog.data?.sources ?? [];
@@ -349,11 +371,20 @@ function Home() {
   const allSourcesUnavailable = sources.length > 0 && sources.every((source) => source.status === GameSourceStatus.unavailable);
   const isUnavailable = summary.data?.sourceStatus === GameSourceStatus.unavailable || allSourcesUnavailable;
   const clearFilters = () => {
+    if (platform !== GamePlatform.PC) {
+      setRequestedPage(null);
+      setLoadedPages([]);
+      setPlatform(GamePlatform.PC);
+    }
     setSearch('');
     setGenre('');
+    setMaxPrice('');
+    setMinDiscount('');
+    setSortOrder('value');
   };
   const nextPage = loadedPages.length ? (latestPage?.page ?? 2) + 1 : 3;
-  const canBrowseMore = platform === GamePlatform.PC && (!latestPage || latestPage.hasMore);
+  const canBrowseMore = platform === GamePlatform.PC && nextPage <= 50 && (!latestPage || latestPage.hasMore);
+  const activeFilters = [platform !== GamePlatform.PC, search.trim(), genre, maxPrice, minDiscount].filter(Boolean).length;
   const browseNext = () => {
     if (extraDeals.isError && requestedPage === nextPage) void extraDeals.refetch();
     else setRequestedPage(nextPage);
@@ -366,17 +397,17 @@ function Home() {
       <header className="border-b border-[#dce2ec] bg-[#202a40] text-white">
         <div className="mx-auto flex max-w-[1480px] items-center justify-between gap-4 px-5 py-4 lg:px-10">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#dfff47] text-[#202a40]">
+            <div className="gvf-brand-mark flex h-9 w-9 items-center justify-center bg-[#dfff47] text-[#202a40]">
               <Zap className="h-5 w-5 fill-current" aria-hidden="true" />
             </div>
             <div>
-              <div className="gvf-display text-lg font-bold leading-none tracking-[-.04em]">Game Value Finder</div>
-              <div className="mt-1 font-mono text-[9px] uppercase tracking-[.18em] text-white/45">buy less blind</div>
+               <div className="gvf-display text-lg font-bold leading-none tracking-[-.04em]">Game Value Finder<span className="text-[#aaf36b]">_</span></div>
+               <div className="mt-1 font-mono text-[9px] uppercase tracking-[.18em] text-white/45">the deal intelligence terminal</div>
             </div>
           </div>
           <div className="hidden items-center gap-2 text-[11px] text-white/60 sm:flex">
             <span className={`h-1.5 w-1.5 rounded-full ${health.isError ? 'bg-[#ff715f]' : 'bg-[#dfff47]'}`} />
-            {health.isError ? 'service offline' : 'service online'}
+             {health.isError ? 'service offline' : health.isLoading ? 'checking connection' : 'service online'}
             <CircleHelp className="ml-1 h-3.5 w-3.5 text-white/35" aria-hidden="true" />
           </div>
         </div>
@@ -384,22 +415,35 @@ function Home() {
 
       <main className="mx-auto max-w-[1480px] px-5 pb-16 lg:px-10">
         <section className="relative overflow-hidden border-b border-[#dce2ec] py-10 sm:py-14 lg:py-16">
-          <div className="pointer-events-none absolute -right-8 top-5 hidden select-none font-mono text-[9rem] font-bold leading-none tracking-[-.16em] text-[#e8edf5] xl:block">VALUE</div>
-          <div className="relative max-w-3xl">
+           <div className="pointer-events-none absolute -right-8 top-5 hidden select-none font-mono text-[9rem] font-bold leading-none tracking-[-.16em] text-[#e8edf5] xl:block" aria-hidden="true">VALUE</div>
+           <div className="relative max-w-3xl gvf-rise">
             <div className="mb-5 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[.19em] text-[#7b890f]">
               <span className="h-2 w-2 rounded-full bg-[#dfff47]" />
               verified deal intelligence
             </div>
-            <h1 className="gvf-display max-w-3xl text-[clamp(2.7rem,6vw,6.2rem)] font-bold leading-[.92] text-[#202a40]">
-              Find the games<br /><span className="text-[#6e8500]">worth your money.</span>
+             <h1 className="gvf-display max-w-3xl text-[clamp(2.7rem,6vw,6.2rem)] font-bold leading-[.92] text-[#202a40]">
+               Less guesswork.<br /><span className="text-[#6e8500]">More game.</span>
             </h1>
             <p className="mt-6 max-w-xl text-base leading-relaxed text-[#68748a] sm:text-lg">
-              A value-ranked shelf of real deals, with every score traceable to a price and a review source. No hype. No mystery math.
+               Real deals, ranked by the numbers. Every value score traces back to a price and a review source. No hype. No mystery math.
             </p>
           </div>
+           <div className="gvf-hero-panel" aria-hidden="true">
+             <div className="gvf-panel-top"><span>GVF // DEAL SCANNER</span><span>01 / VERIFIED INDEX</span></div>
+             <div className="gvf-radar">
+               <span className="gvf-radar-core"><Zap className="h-12 w-12" strokeWidth={1} /></span>
+               <span className="gvf-radar-line gvf-radar-line-x" />
+               <span className="gvf-radar-line gvf-radar-line-y" />
+               <span className="gvf-radar-point gvf-radar-point-a" />
+               <span className="gvf-radar-point gvf-radar-point-b" />
+               <span className="gvf-radar-point gvf-radar-point-c" />
+             </div>
+             <div className="gvf-panel-bottom"><span>PRICE / RATING / SOURCE</span><span>VERIFY BEFORE BUYING</span></div>
+           </div>
 
-          <div className="relative mt-9 flex max-w-3xl flex-col gap-3 sm:flex-row">
+           <div className="relative mt-9 flex max-w-3xl flex-col gap-3 sm:flex-row gvf-rise gvf-delay-2">
             <label className="group relative flex min-h-12 flex-1 items-center rounded-xl border border-[#cfd7e4] bg-white shadow-[0_8px_20px_rgba(31,42,63,.04)] focus-within:border-[#879b16] focus-within:ring-2 focus-within:ring-[#dfff47]/60">
+              <span className="sr-only">Search game titles</span>
               <Search className="ml-4 h-4 w-4 shrink-0 text-[#8893a7]" aria-hidden="true" />
               <input
                 type="search"
@@ -412,8 +456,10 @@ function Home() {
               {search && <button type="button" onClick={() => setSearch('')} className="mr-3 text-[#8a95a8] hover:text-[#202a40]" aria-label="Clear search" data-testid="button-clear-search"><X className="h-4 w-4" /></button>}
             </label>
             <div className="relative">
+              <label htmlFor="genre-filter" className="sr-only">Genre</label>
               <SlidersHorizontal className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-[#758198]" aria-hidden="true" />
               <select
+                id="genre-filter"
                 value={genre}
                 onChange={(event) => setGenre(event.target.value)}
                 className="min-h-12 w-full appearance-none rounded-xl border border-[#cfd7e4] bg-white pl-11 pr-11 text-sm font-semibold text-[#4f5c73] outline-none focus:border-[#879b16] focus:ring-2 focus:ring-[#dfff47]/60 sm:w-52"
@@ -445,6 +491,7 @@ function Home() {
                     setPlatform(value);
                     setGenre('');
                   }}
+                   aria-pressed={platform === value}
                   className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold transition sm:flex-none ${platform === value ? 'bg-[#202a40] text-white shadow-sm' : 'text-[#758198] hover:text-[#202a40]'}`}
                   data-testid={`button-platform-${value.toLowerCase()}`}
                 >
@@ -456,7 +503,34 @@ function Home() {
           </div>
         </section>
 
-        <section className="grid gap-3 py-6 sm:grid-cols-3">
+        <section className="gvf-controls my-6 rounded-xl border p-4 sm:p-5" aria-label="Sort and filter deals">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-sm font-bold"><SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> Refine the shelf</h2>
+            <button type="button" onClick={clearFilters} disabled={!activeFilters && sortOrder === 'value'} className="gvf-clear rounded-md px-3 py-1.5 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50" data-testid="button-reset-filters">Clear filters & sort</button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="flex flex-col gap-1.5 text-xs font-semibold" htmlFor="select-max-price">Maximum price (USD)
+              <select id="select-max-price" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} className="gvf-select min-h-11 rounded-lg border px-3 text-sm" data-testid="select-max-price">
+                <option value="">Any price</option>
+                {[5, 10, 20, 30, 50].map((value) => <option key={value} value={value}>Up to ${value}</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5 text-xs font-semibold" htmlFor="select-min-discount">Minimum discount
+              <select id="select-min-discount" value={minDiscount} onChange={(event) => setMinDiscount(event.target.value)} className="gvf-select min-h-11 rounded-lg border px-3 text-sm" data-testid="select-min-discount">
+                <option value="">Any discount</option>
+                {[25, 50, 75, 90].map((value) => <option key={value} value={value}>{value}% or more</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5 text-xs font-semibold" htmlFor="select-sort">Sort by
+              <select id="select-sort" value={sortOrder} onChange={(event) => setSortOrder(event.target.value as SortOrder)} className="gvf-select min-h-11 rounded-lg border px-3 text-sm" data-testid="select-sort">
+                {(Object.keys(sortLabels) as SortOrder[]).map((order) => <option value={order} key={order}>{sortLabels[order]}</option>)}
+              </select>
+            </label>
+          </div>
+          <p className="mt-3 text-xs opacity-75">Filters and sorting apply to the verified games already loaded. Browse more PC deals to expand this view.</p>
+        </section>
+
+         <section className="grid gap-3 py-6 sm:grid-cols-3" aria-label="Catalog signal">
           <div className="rounded-xl border border-[#dce2ec] bg-white p-4">
             <div className="mb-3 flex items-center justify-between text-[#8792a5]"><span className="font-mono text-[10px] uppercase tracking-[.15em]">catalog size</span><Database className="h-4 w-4" aria-hidden="true" /></div>
             <div className="gvf-display text-3xl font-bold text-[#202a40]" data-testid="text-catalog-count">{summary.data?.gameCount ?? '—'}</div>
@@ -484,13 +558,13 @@ function Home() {
                 </h2>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <div className="font-mono text-[10px] uppercase tracking-[.13em] text-[#8993a5]">{games.length} shown · highest value first</div>
+                <div className="font-mono text-[10px] uppercase tracking-[.13em] text-[#8993a5]" role="status" aria-live="polite" data-testid="text-results-count">{catalog.isLoading ? 'Loading verified games…' : `${games.length} shown · ${sortLabels[sortOrder]}${activeFilters ? ` · ${activeFilters} active filter${activeFilters === 1 ? '' : 's'}` : ''}`}</div>
                 {canBrowseMore && <a href="#pc-deal-pagination" className="text-xs font-bold text-[#6e8500] underline underline-offset-4">Browse more PC deals ↓</a>}
               </div>
             </div>
 
             {catalog.isLoading ? <CatalogSkeleton /> : catalog.isError ? (
-              <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-[#ffd3cd] bg-[#fff7f5] px-6 text-center" data-testid="state-catalog-error">
+               <div className="gvf-error flex min-h-[360px] flex-col items-center justify-center border px-6 text-center" data-testid="state-catalog-error">
                 <TriangleAlert className="mb-4 h-8 w-8 text-[#d35a4e]" aria-hidden="true" />
                 <h2 className="gvf-display text-2xl font-bold text-[#7e332c]">The feed missed a beat.</h2>
                 <p className="mt-2 max-w-sm text-sm leading-relaxed text-[#a15a52]">We could not verify this catalog right now. Try again in a moment.</p>
@@ -506,10 +580,10 @@ function Home() {
               </div>
             )}
             {platform === GamePlatform.PC && (
-              <div id="pc-deal-pagination" className="mt-7 rounded-xl border border-[#dce2ec] bg-white p-5" data-testid="pc-deal-pagination">
+               <div id="pc-deal-pagination" className="gvf-pagination mt-7 border border-[#dce2ec] bg-white p-5" data-testid="pc-deal-pagination">
                 <h3 className="text-sm font-bold text-[#202a40]">More PC deals</h3>
                 <p className="mt-1 text-xs leading-relaxed text-[#748097]">
-                  The saved snapshot covers the first 60 deal candidates. Each click requests one later page of up to 20 candidates and checks Steam age/content metadata before showing any games. Search and genre filters apply to pages you have loaded. Pages are not stored as a bulk catalog; prices are captured on request, not live.
+                   The saved snapshot covers the first 60 deal candidates. Each click requests one later page of up to 20 candidates and checks Steam age/content metadata before showing any games. Your current filters and sort apply to pages you have loaded. Pages are not stored as a bulk catalog; prices are captured on request, not live.
                 </p>
                 {latestPage && <p className="mt-2 text-xs text-[#748097]">Page {latestPage.page + 1}: {latestPage.games.length} verified safe games · {formatRefreshDate(latestPage.refreshedAt)}. {latestPage.hasMore ? 'More pages may be available.' : 'No further page available.'}</p>}
                 {extraDeals.isError && <p className="mt-2 text-xs font-semibold text-[#a13a32]" role="alert">Could not verify this page right now. Try again later; previously loaded games remain visible.</p>}
@@ -561,10 +635,16 @@ function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-[#dce2ec] bg-[#f0f3f8]">
-        <div className="mx-auto flex max-w-[1480px] flex-col gap-2 px-5 py-6 text-[11px] text-[#7d8799] sm:flex-row sm:items-center sm:justify-between lg:px-10">
-          <span className="font-mono uppercase tracking-[.12em]">Game Value Finder · data before dopamine</span>
-          <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-[#6e8500]" aria-hidden="true" /> Adults-only content is not included.</span>
+       <footer className="border-t border-[#dce2ec] bg-[#f0f3f8]">
+         <div className="mx-auto flex max-w-[1480px] flex-col gap-5 px-5 py-8 text-[11px] text-[#7d8799] sm:flex-row sm:items-center sm:justify-between lg:px-10">
+           <div className="space-y-2">
+             <span className="block font-mono uppercase tracking-[.12em]">Game Value Finder / data before dopamine</span>
+             <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-[#6e8500]" aria-hidden="true" /> Adults-only content is not included.</span>
+           </div>
+           <div className="flex flex-wrap items-center gap-4 font-mono text-[11px]">
+             <button type="button" disabled className="border border-[#496674] px-3 py-2 text-[#a9bdc7]" data-testid="button-donate">Donate · coming soon</button>
+             <a href="https://github.com/chxio" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 py-2 underline underline-offset-4" data-testid="link-reach-out">Reach out <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /></a>
+           </div>
         </div>
       </footer>
     </div>

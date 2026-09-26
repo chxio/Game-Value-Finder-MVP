@@ -1,2 +1,3 @@
 - [Steam response identity](steam-response-identity.md) — public app-detail responses may be keyed by a related package ID; verify the app identity inside the payload.
 - [Cross-audience ratings](cross-audience-ratings.md) — keep player and critic scores separate; don't blend different audiences into the value ranking.
+- [Generated client declarations](generated-client-declarations.md) — rebuild the shared TypeScript client before judging frontend type errors when generated source and declarations disagree.
