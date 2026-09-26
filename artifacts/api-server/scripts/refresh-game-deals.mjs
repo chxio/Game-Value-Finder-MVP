@@ -62,6 +62,7 @@ function normalizedDeal(deal, details, verifiedAt) {
     !Number.isFinite(ratingPercent) || ratingPercent < 0 || ratingPercent > 100 ||
     !Number.isInteger(reviewCount) || reviewCount < 100 ||
     !deal.dealID || deal.storeID !== "1" ||
+    details?.steam_appid !== appId ||
     !isSafe(details, deal.title)
   ) return null;
 
@@ -102,6 +103,9 @@ function normalizedDeal(deal, details, verifiedAt) {
   };
 }
 
+export { getSteamDetails, normalizedDeal };
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
 const rawDeals = await getJson(SOURCE_URL);
 if (!Array.isArray(rawDeals)) throw new Error("Deals API did not return a list.");
 
@@ -237,3 +241,4 @@ const temporaryPath = `${workbookPath}.tmp`;
 await workbook.xlsx.writeFile(temporaryPath);
 await rename(temporaryPath, workbookPath);
 console.log(`Saved ${unique.length} verified games from one CheapShark browse page to ${workbookPath}`);
+}

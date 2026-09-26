@@ -34,7 +34,7 @@ function isApprovedLink(value: string, hostname: string, pathnamePrefix: string)
   }
 }
 
-function parseGame(row: ExcelJS.Row, columns: Map<string, number>): CatalogGame | null {
+export function parseGame(row: ExcelJS.Row, columns: Map<string, number>): CatalogGame | null {
   const field = (name: string) => textCell(row, columns, name);
   const id = field("Steam App ID");
   const name = field("Game / deal").trim();
@@ -94,7 +94,8 @@ function parseGame(row: ExcelJS.Row, columns: Map<string, number>): CatalogGame 
       { source: "Steam player reviews", audience: "players", originalScore: Math.round(ratingOutOfFive * 20 * 100) / 100,
         originalScale: 100, ratingOutOfFive, url: reviewUrl },
       ...(criticScoreText && Number.isInteger(criticScore) && criticScore >= 1 && criticScore <= 100 &&
-        isApprovedLink(criticUrl, "www.metacritic.com", "/game/")
+        (isApprovedLink(criticUrl, "www.metacritic.com", "/game/") ||
+          isApprovedLink(criticUrl, "metacritic.com", "/game/"))
         ? [{ source: "Metacritic", audience: "critics" as const, originalScore: criticScore,
           originalScale: 100, ratingOutOfFive: Math.round(criticScore * 5) / 100, url: criticUrl }]
         : []),
