@@ -9,6 +9,9 @@ import type { Game } from './game';
 import type { GamePlatform } from './gamePlatform';
 import type { GameSource } from './gameSource';
 
+/**
+ * Live console offers or a dated PC snapshot, not a comprehensive inventory. An empty catalog never implies a zero-price offer.
+ */
 export interface GameCatalog {
   platform: GamePlatform;
   region: string;

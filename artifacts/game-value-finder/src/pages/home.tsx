@@ -159,7 +159,7 @@ function GameCard({ game, index }: { game: Game; index: number }) {
         </div>
 
         <div className="mb-4 flex items-center justify-between text-[11px] text-[#7d8799]">
-          <span>{game.reviewCount.toLocaleString()} Steam reviews · snapshot rating</span>
+          <span>{game.reviewCount.toLocaleString()} {game.platform === GamePlatform.PC ? 'Steam reviews · snapshot rating' : `ratings · ${game.provider}`}</span>
           <span className="line-through">{formatMoney(game.originalPrice, game.currency)}</span>
         </div>
 
@@ -178,7 +178,7 @@ function GameCard({ game, index }: { game: Game; index: number }) {
             target="_blank"
             rel="noreferrer"
             className="flex items-center justify-center rounded-lg border border-[#dce2ec] px-3 text-[#5f6b80] transition hover:border-[#9ba8bb] hover:text-[#202a40] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#dfff47] focus-visible:ring-offset-2"
-            aria-label={`Read reviews for ${game.name}`}
+            aria-label={`View ${game.platform === GamePlatform.PC ? 'reviews' : 'ratings'} for ${game.name}`}
             data-testid={`link-review-${game.id}`}
           >
             <ChartNoAxesCombined className="h-4 w-4" aria-hidden="true" />
@@ -237,9 +237,9 @@ function EmptyPanel({ type, onClear, sourceUrl }: { type: 'unavailable' | 'empty
           <Radio className="h-6 w-6" aria-hidden="true" />
         </div>
         <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-[#a47714]">source unavailable</p>
-        <h2 className="gvf-display text-2xl font-bold text-[#27334b]">No live feed for this platform yet.</h2>
+        <h2 className="gvf-display text-2xl font-bold text-[#27334b]">Store data is unavailable right now.</h2>
         <p className="mt-2 max-w-md text-sm leading-relaxed text-[#7d8799]">
-          We do not fill gaps with guesses. Switch platforms to browse verified pricing and review data from a live source.
+          We do not fill gaps with guesses. Try again later or browse the official store.
         </p>
         {sourceUrl && (
           <a href={sourceUrl} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#202a40] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#303d58]" data-testid="link-official-platform-store">
@@ -256,8 +256,8 @@ function EmptyPanel({ type, onClear, sourceUrl }: { type: 'unavailable' | 'empty
         <Search className="h-6 w-6" aria-hidden="true" />
       </div>
       <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-[#7d8799]">no matches</p>
-      <h2 className="gvf-display text-2xl font-bold text-[#27334b]">That search came up empty.</h2>
-      <p className="mt-2 max-w-md text-sm leading-relaxed text-[#7d8799]">Try a broader title, or clear the genre filter and let the catalog do the sorting.</p>
+      <h2 className="gvf-display text-2xl font-bold text-[#27334b]">No verified deals matched.</h2>
+      <p className="mt-2 max-w-md text-sm leading-relaxed text-[#7d8799]">Only discounted paid games with storefront ratings appear here. Try a broader title or clear the genre filter.</p>
       {onClear && (
         <button type="button" onClick={onClear} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#202a40] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#303d58]" data-testid="button-clear-filters">
           <X className="h-3.5 w-3.5" aria-hidden="true" /> Clear filters

@@ -27,6 +27,9 @@ export const GameSourceStatus = {
   unavailable: 'unavailable',
 } as const;
 
+/**
+ * A discounted, paid offer with a verified matching storefront rating. Console offers currently use US storefront prices.
+ */
 export interface Game {
   id: string;
   name: string;
@@ -41,6 +44,7 @@ export interface Game {
   originalPrice: number;
   discountPercent: number;
   ratingOutOfFive: number;
+  /** Exact number of player ratings on the linked storefront product page (Steam uses positive plus negative review totals). */
   reviewCount: number;
   dopeScore: number;
 }
@@ -52,6 +56,9 @@ export interface GameSource {
   detail: string;
 }
 
+/**
+ * Live console offers or a dated PC snapshot, not a comprehensive inventory. An empty catalog never implies a zero-price offer.
+ */
 export interface GameCatalog {
   platform: GamePlatform;
   region: string;

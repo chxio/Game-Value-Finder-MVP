@@ -7,6 +7,9 @@
  */
 import type { GamePlatform } from './gamePlatform';
 
+/**
+ * A discounted, paid offer with a verified matching storefront rating. Console offers currently use US storefront prices.
+ */
 export interface Game {
   id: string;
   name: string;
@@ -21,6 +24,7 @@ export interface Game {
   originalPrice: number;
   discountPercent: number;
   ratingOutOfFive: number;
+  /** Exact number of player ratings on the linked storefront product page (Steam uses positive plus negative review totals). */
   reviewCount: number;
   dopeScore: number;
 }

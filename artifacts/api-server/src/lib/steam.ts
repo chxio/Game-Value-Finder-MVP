@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { getConsoleCatalog } from "./console-stores";
 
 type Platform = "PC" | "Xbox" | "PlayStation";
 
@@ -85,31 +86,6 @@ const STEAM_DEALS_URL = "https://store.steampowered.com/search/?specials=1";
 const STEAM_REVIEWS_URL = "https://steamcommunity.com/";
 const ADULT_TERMS = /\b(hentai|porn|xxx|erotic|sexual|nudity|fetish|orgy|adult only|18\+)\b/i;
 const ADULT_DESCRIPTOR_IDS = new Set([3, 4, 5, 6]);
-
-function unavailableCatalog(platform: Platform, region: string): Catalog {
-  const isXbox = platform === "Xbox";
-  const storeUrl = isXbox
-    ? "https://www.xbox.com/en-US/games/all-games"
-    : "https://store.playstation.com/en-us/pages/deals";
-
-  return {
-    platform,
-    region,
-    currency: "",
-    games: [],
-    sources: [
-      {
-        name: isXbox ? "Xbox Store" : "PlayStation Store",
-        url: storeUrl,
-        status: "unavailable",
-        detail: "Official storefront available; a reliable public price and review feed is not connected.",
-      },
-    ],
-    refreshedAt: null,
-    message:
-      "No verified live catalog is connected for this platform yet. Browse the official store instead; prices and ratings are never guessed.",
-  };
-}
 
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url, {
@@ -291,7 +267,7 @@ async function loadSteamCatalog(region: string): Promise<Catalog> {
 }
 
 export async function getCatalog(platform: Platform, region = "US"): Promise<Catalog> {
-  if (platform !== "PC") return unavailableCatalog(platform, region);
+  if (platform !== "PC") return getConsoleCatalog(platform, region);
 
   const cached = cache.get(region);
   if (cached && cached.until > Date.now()) return cached.catalog;

@@ -50,9 +50,9 @@ export const GetGameCatalogResponse = zod.object({
   "originalPrice": zod.number(),
   "discountPercent": zod.number(),
   "ratingOutOfFive": zod.number(),
-  "reviewCount": zod.number().int(),
+  "reviewCount": zod.number().int().describe('Exact number of player ratings on the linked storefront product page (Steam uses positive plus negative review totals).'),
   "dopeScore": zod.number()
-})),
+}).describe('A discounted, paid offer with a verified matching storefront rating. Console offers currently use US storefront prices.')),
   "sources": zod.array(zod.object({
   "name": zod.string(),
   "url": zod.string(),
@@ -61,7 +61,7 @@ export const GetGameCatalogResponse = zod.object({
 })),
   "refreshedAt": zod.coerce.date().nullable(),
   "message": zod.string()
-})
+}).describe('Live console offers or a dated PC snapshot, not a comprehensive inventory. An empty catalog never implies a zero-price offer.')
 
 
 /**

@@ -97,6 +97,7 @@ components:
       enum: [live, snapshot, unavailable]
     Game:
       type: object
+      description: A discounted, paid offer with a verified matching storefront rating. Console offers currently use US storefront prices.
       required:
         - id
         - name
@@ -127,7 +128,9 @@ components:
         originalPrice: { type: number }
         discountPercent: { type: number }
         ratingOutOfFive: { type: number }
-        reviewCount: { type: integer }
+        reviewCount:
+          type: integer
+          description: Exact number of player ratings on the linked storefront product page (Steam uses positive plus negative review totals).
         dopeScore: { type: number }
     GameSource:
       type: object
@@ -139,6 +142,7 @@ components:
         detail: { type: string }
     GameCatalog:
       type: object
+      description: Live console offers or a dated PC snapshot, not a comprehensive inventory. An empty catalog never implies a zero-price offer.
       required: [platform, region, currency, games, sources, refreshedAt, message]
       properties:
         platform: { $ref: "#/components/schemas/GamePlatform" }
