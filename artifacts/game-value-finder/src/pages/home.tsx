@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowUpRight,
   BadgeCheck,
@@ -26,13 +26,16 @@ import {
 import {
   GamePlatform,
   GameSourceStatus,
+  getBrowsePcDealsQueryKey,
   getGetGameCatalogQueryKey,
   getGetGameCatalogSummaryQueryKey,
   getHealthCheckQueryKey,
   useGetGameCatalog,
   useGetGameCatalogSummary,
+  useBrowsePcDeals,
   useHealthCheck,
   type Game,
+  type PcDealPage,
   type GameSource,
 } from '@workspace/api-client-react';
 
@@ -104,7 +107,7 @@ function GameArtwork({ game }: { game: Game }) {
   );
 }
 
-function GameCard({ game, index }: { game: Game; index: number }) {
+function GameCard({ game, index, priceCapturedAt }: { game: Game; index: number; priceCapturedAt?: string | null }) {
   const isDealLink = game.provider.includes('CheapShark');
   return (
     <article
@@ -162,6 +165,9 @@ function GameCard({ game, index }: { game: Game; index: number }) {
           <span>{game.reviewCount.toLocaleString()} {game.platform === GamePlatform.PC ? 'Steam reviews · snapshot' : `ratings · ${game.provider}`}</span>
           <span className="line-through">{formatMoney(game.originalPrice, game.currency)}</span>
         </div>
+        {game.platform === GamePlatform.PC && (
+          <p className="mb-3 text-[11px] text-[#7d8799]">Price {formatRefreshDate(priceCapturedAt)} · not live</p>
+        )}
         {game.platform === GamePlatform.PC && (
           <div className="mb-4 rounded-lg border border-[#e5e8ef] bg-[#fbfcfd] px-3 py-2 text-[11px] text-[#657088]">
             <p className="mb-1 font-semibold text-[#27334b]">Rating comparison</p>
@@ -288,6 +294,8 @@ function Home() {
   const [platform, setPlatform] = useState<GamePlatform>(GamePlatform.PC);
   const [search, setSearch] = useState('');
   const [genre, setGenre] = useState('');
+  const [requestedPage, setRequestedPage] = useState<number | null>(null);
+  const [loadedPages, setLoadedPages] = useState<PcDealPage[]>([]);
 
   const catalogParams = useMemo(() => ({
     platform,
@@ -299,6 +307,15 @@ function Home() {
   const catalog = useGetGameCatalog(catalogParams, {
     query: { queryKey: getGetGameCatalogQueryKey(catalogParams) },
   });
+  const extraDeals = useBrowsePcDeals({ page: requestedPage ?? 3 }, {
+    query: { queryKey: getBrowsePcDealsQueryKey({ page: requestedPage ?? 3 }), enabled: platform === GamePlatform.PC && requestedPage !== null, retry: false, staleTime: 0, refetchOnWindowFocus: false },
+  });
+  useEffect(() => {
+    if (!extraDeals.data || requestedPage === null || extraDeals.data.page !== requestedPage) return;
+    setLoadedPages((previous) => previous.some((entry) => entry.page === extraDeals.data!.page)
+      ? previous.map((entry) => entry.page === extraDeals.data!.page ? extraDeals.data! : entry)
+      : [...previous, extraDeals.data!]);
+  }, [extraDeals.data, requestedPage]);
   const summary = useGetGameCatalogSummary({ platform }, {
     query: { queryKey: getGetGameCatalogSummaryQueryKey({ platform }), staleTime: 120000 },
   });
@@ -306,15 +323,40 @@ function Home() {
     query: { queryKey: getHealthCheckQueryKey(), staleTime: 300000, retry: 1 },
   });
 
-  const games = catalog.data?.games ?? [];
-  const sources = catalog.data?.sources ?? [];
-  const genres = summary.data?.genres ?? [];
+  const games = useMemo(() => {
+    const snapshot = catalog.data?.games ?? [];
+    if (platform !== GamePlatform.PC) return snapshot;
+    const seen = new Set(snapshot.map((game) => game.id));
+    const additional = loadedPages.flatMap((page) => page.games).filter((game) => {
+      if (seen.has(game.id)) return false;
+      seen.add(game.id);
+      return (!genre || genre === 'All' || game.genre.includes(genre)) &&
+        (!search.trim() || game.name.toLowerCase().includes(search.trim().toLowerCase()));
+    });
+    return [...snapshot, ...additional].sort((a, b) => b.dopeScore - a.dopeScore);
+  }, [catalog.data?.games, genre, loadedPages, platform, search]);
+  const latestPage = loadedPages.at(-1);
+  const sources = platform === GamePlatform.PC && latestPage
+    ? [...(catalog.data?.sources ?? []), ...latestPage.sources.slice(0, 2)]
+    : catalog.data?.sources ?? [];
+  const genres = useMemo(() => [...new Set([
+    ...(summary.data?.genres ?? []),
+    ...(platform === GamePlatform.PC ? loadedPages.flatMap((page) => page.games.flatMap((game) => game.genre)) : []),
+  ])].sort(), [summary.data?.genres, platform, loadedPages]);
   const allSourcesUnavailable = sources.length > 0 && sources.every((source) => source.status === GameSourceStatus.unavailable);
   const isUnavailable = summary.data?.sourceStatus === GameSourceStatus.unavailable || allSourcesUnavailable;
   const clearFilters = () => {
     setSearch('');
     setGenre('');
   };
+  const nextPage = loadedPages.length ? (latestPage?.page ?? 2) + 1 : 3;
+  const canBrowseMore = platform === GamePlatform.PC && (!latestPage || latestPage.hasMore);
+  const browseNext = () => {
+    if (extraDeals.isError && requestedPage === nextPage) void extraDeals.refetch();
+    else setRequestedPage(nextPage);
+  };
+  const priceCapturedAt = (game: Game) =>
+    loadedPages.find((page) => page.games.some((item) => item.id === game.id))?.refreshedAt ?? catalog.data?.refreshedAt;
 
   return (
     <div className="gvf-noise min-h-[100dvh] text-[#202a40]">
@@ -392,7 +434,14 @@ function Home() {
                 <button
                   type="button"
                   key={value}
-                  onClick={() => { setPlatform(value); setGenre(''); }}
+                  onClick={() => {
+                    if (platform !== value) {
+                      setRequestedPage(null);
+                      setLoadedPages([]);
+                    }
+                    setPlatform(value);
+                    setGenre('');
+                  }}
                   className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold transition sm:flex-none ${platform === value ? 'bg-[#202a40] text-white shadow-sm' : 'text-[#758198] hover:text-[#202a40]'}`}
                   data-testid={`button-platform-${value.toLowerCase()}`}
                 >
@@ -408,7 +457,7 @@ function Home() {
           <div className="rounded-xl border border-[#dce2ec] bg-white p-4">
             <div className="mb-3 flex items-center justify-between text-[#8792a5]"><span className="font-mono text-[10px] uppercase tracking-[.15em]">catalog size</span><Database className="h-4 w-4" aria-hidden="true" /></div>
             <div className="gvf-display text-3xl font-bold text-[#202a40]" data-testid="text-catalog-count">{summary.data?.gameCount ?? '—'}</div>
-            <div className="mt-1 text-xs text-[#8792a5]">ranked games in {platform}</div>
+            <div className="mt-1 text-xs text-[#8792a5]">{platform === GamePlatform.PC ? 'verified games in saved snapshot' : `ranked games in ${platform}`}</div>
           </div>
           <div className="rounded-xl border border-[#dce2ec] bg-white p-4">
             <div className="mb-3 flex items-center justify-between text-[#8792a5]"><span className="font-mono text-[10px] uppercase tracking-[.15em]">top dope score</span><BadgeCheck className="h-4 w-4" aria-hidden="true" /></div>
@@ -431,7 +480,10 @@ function Home() {
                   {search ? `Matches for “${search}”` : 'Worth a closer look'}
                 </h2>
               </div>
-              <div className="font-mono text-[10px] uppercase tracking-[.13em] text-[#8993a5]">{games.length} shown · highest value first</div>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="font-mono text-[10px] uppercase tracking-[.13em] text-[#8993a5]">{games.length} shown · highest value first</div>
+                {canBrowseMore && <a href="#pc-deal-pagination" className="text-xs font-bold text-[#6e8500] underline underline-offset-4">Browse more PC deals ↓</a>}
+              </div>
             </div>
 
             {catalog.isLoading ? <CatalogSkeleton /> : catalog.isError ? (
@@ -443,11 +495,32 @@ function Home() {
                   <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /> Retry feed
                 </button>
               </div>
-            ) : isUnavailable ? <EmptyPanel type="unavailable" sourceUrl={sources[0]?.url} /> : games.length === 0 ? (
+            ) : isUnavailable && !loadedPages.length ? <EmptyPanel type="unavailable" sourceUrl={sources[0]?.url} /> : games.length === 0 ? (
               <EmptyPanel type="empty" onClear={clearFilters} />
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {games.map((game, index) => <GameCard key={game.id} game={game} index={index} />)}
+                {games.map((game, index) => <GameCard key={game.id} game={game} index={index} priceCapturedAt={priceCapturedAt(game)} />)}
+              </div>
+            )}
+            {platform === GamePlatform.PC && (
+              <div id="pc-deal-pagination" className="mt-7 rounded-xl border border-[#dce2ec] bg-white p-5" data-testid="pc-deal-pagination">
+                <h3 className="text-sm font-bold text-[#202a40]">More PC deals</h3>
+                <p className="mt-1 text-xs leading-relaxed text-[#748097]">
+                  The saved snapshot covers the first 60 deal candidates. Each click requests one later page of up to 20 candidates and checks Steam age/content metadata before showing any games. Search and genre filters apply to pages you have loaded. Pages are not stored as a bulk catalog; prices are captured on request, not live.
+                </p>
+                {latestPage && <p className="mt-2 text-xs text-[#748097]">Page {latestPage.page + 1}: {latestPage.games.length} verified safe games · {formatRefreshDate(latestPage.refreshedAt)}. {latestPage.hasMore ? 'More pages may be available.' : 'No further page available.'}</p>}
+                {extraDeals.isError && <p className="mt-2 text-xs font-semibold text-[#a13a32]" role="alert">Could not verify this page right now. Try again later; previously loaded games remain visible.</p>}
+                {canBrowseMore && (
+                  <button
+                    type="button"
+                    disabled={extraDeals.isFetching}
+                    onClick={browseNext}
+                    className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#202a40] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#303d58] disabled:cursor-wait disabled:opacity-60"
+                    data-testid="button-browse-pc-deals"
+                  >
+                    {extraDeals.isFetching ? 'Checking Steam metadata…' : extraDeals.isError ? 'Retry this page' : `Browse next PC deals · page ${nextPage + 1}`}
+                  </button>
+                )}
               </div>
             )}
           </div>

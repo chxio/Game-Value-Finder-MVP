@@ -80,6 +80,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GameCatalogSummary"
+  /games/pc-deals:
+    get:
+      operationId: browsePcDeals
+      tags: [games]
+      summary: Browse one additional page of verified PC deals on demand
+      parameters:
+        - name: page
+          in: query
+          required: true
+          description: CheapShark page number (zero-based); pages 0–2 belong to the saved 60-deal snapshot.
+          schema: { type: integer, minimum: 3, maximum: 50 }
+      responses:
+        "200":
+          description: A fetched page and its pagination status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PcDealPage"
+        "400":
+          description: Invalid page
+        "503":
+          description: Deal source or safety verification unavailable; retry later
 components:
   schemas:
     HealthStatus:
@@ -174,6 +196,14 @@ components:
           items: { $ref: "#/components/schemas/GameSource" }
         refreshedAt: { type: ["string", "null"], format: date-time }
         message: { type: string }
+    PcDealPage:
+      allOf:
+        - $ref: "#/components/schemas/GameCatalog"
+        - type: object
+          required: [page, hasMore]
+          properties:
+            page: { type: integer }
+            hasMore: { type: boolean }
     GameCatalogSummary:
       type: object
       required: [platform, gameCount, topDopeScore, genres, sourceStatus]

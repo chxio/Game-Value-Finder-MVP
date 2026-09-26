@@ -89,3 +89,59 @@ export const GetGameCatalogSummaryResponse = zod.object({
 })
 
 
+/**
+ * @summary Browse one additional page of verified PC deals on demand
+ */
+export const browsePcDealsQueryPageMin = 3;
+export const browsePcDealsQueryPageMax = 50;
+
+
+
+export const BrowsePcDealsQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(browsePcDealsQueryPageMin).max(browsePcDealsQueryPageMax).describe('CheapShark page number (zero-based); pages 0–2 belong to the saved 60-deal snapshot.')
+})
+
+export const BrowsePcDealsResponse = zod.object({
+  "platform": zod.enum(['PC', 'Xbox', 'PlayStation']),
+  "region": zod.string(),
+  "currency": zod.string(),
+  "games": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "platform": zod.enum(['PC', 'Xbox', 'PlayStation']),
+  "provider": zod.string(),
+  "genre": zod.array(zod.string()),
+  "imageUrl": zod.string(),
+  "storeUrl": zod.string(),
+  "reviewUrl": zod.string(),
+  "currency": zod.string(),
+  "currentPrice": zod.number(),
+  "originalPrice": zod.number(),
+  "discountPercent": zod.number(),
+  "ratingOutOfFive": zod.number(),
+  "reviewCount": zod.number().int().describe('Number of player ratings reported by the rating source when captured (PC workbook uses CheapShark\'s Steam review count; live Steam uses positive plus negative totals).'),
+  "dopeScore": zod.number(),
+  "ratings": zod.array(zod.object({
+  "source": zod.string(),
+  "audience": zod.enum(['players', 'critics']),
+  "originalScore": zod.number(),
+  "originalScale": zod.number(),
+  "ratingOutOfFive": zod.number(),
+  "url": zod.string()
+}).describe('An attributed component rating. Absence means no verified score was available, not zero.')).optional().describe('Available attributed rating components; editorial and player ratings are not averaged.'),
+  "scoreBasis": zod.string().optional().describe('Name of the rating source used in ratingOutOfFive and the value score.')
+}).describe('A discounted, paid offer with a verified matching storefront rating. Console offers currently use US storefront prices.')),
+  "sources": zod.array(zod.object({
+  "name": zod.string(),
+  "url": zod.string(),
+  "status": zod.enum(['live', 'snapshot', 'unavailable']),
+  "detail": zod.string()
+})),
+  "refreshedAt": zod.coerce.date().nullable(),
+  "message": zod.string()
+}).describe('Live console offers or a dated PC snapshot, not a comprehensive inventory. An empty catalog never implies a zero-price offer.').and(zod.object({
+  "page": zod.number().int(),
+  "hasMore": zod.boolean()
+}))
+
+

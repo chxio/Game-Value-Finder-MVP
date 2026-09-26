@@ -4,11 +4,29 @@ import {
   GetGameCatalogResponse,
   GetGameCatalogSummaryQueryParams,
   GetGameCatalogSummaryResponse,
+  BrowsePcDealsQueryParams,
+  BrowsePcDealsResponse,
 } from "@workspace/api-zod";
 import { getCatalog } from "../lib/steam";
 import { getWorkbookCatalog } from "../lib/workbook-catalog";
+import { browsePcDeals } from "../lib/pc-deals";
 
 const router: IRouter = Router();
+
+router.get("/games/pc-deals", async (req, res): Promise<void> => {
+  const parsed = BrowsePcDealsQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  try {
+    res.set("Cache-Control", "no-store");
+    res.json(BrowsePcDealsResponse.parse(await browsePcDeals(parsed.data.page)));
+  } catch (error) {
+    req.log.warn({ error }, "On-demand PC deals unavailable");
+    res.status(503).json({ error: "The deal source or Steam verification is unavailable. Try again later." });
+  }
+});
 
 router.get("/games", async (req, res): Promise<void> => {
   const parsed = GetGameCatalogQueryParams.safeParse(req.query);

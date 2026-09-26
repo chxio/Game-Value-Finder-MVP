@@ -94,6 +94,11 @@ export interface GameCatalog {
   message: string;
 }
 
+export type PcDealPage = GameCatalog & {
+  page: number;
+  hasMore: boolean;
+};
+
 export interface GameCatalogSummary {
   platform: GamePlatform;
   gameCount: number;
@@ -116,5 +121,14 @@ region?: string;
 
 export type GetGameCatalogSummaryParams = {
 platform: GamePlatform;
+};
+
+export type BrowsePcDealsParams = {
+/**
+ * CheapShark page number (zero-based); pages 0–2 belong to the saved 60-deal snapshot.
+ * @minimum 3
+ * @maximum 50
+ */
+page: number;
 };
 

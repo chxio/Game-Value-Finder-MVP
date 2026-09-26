@@ -16,11 +16,13 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  BrowsePcDealsParams,
   GameCatalog,
   GameCatalogSummary,
   GetGameCatalogParams,
   GetGameCatalogSummaryParams,
-  HealthStatus
+  HealthStatus,
+  PcDealPage
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -284,6 +286,90 @@ export function useGetGameCatalogSummary<TData = Awaited<ReturnType<typeof getGa
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetGameCatalogSummaryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getBrowsePcDealsUrl = (params: BrowsePcDealsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/games/pc-deals?${stringifiedParams}` : `/api/games/pc-deals`
+}
+
+/**
+ * @summary Browse one additional page of verified PC deals on demand
+ */
+export const browsePcDeals = async (params: BrowsePcDealsParams, options?: Parameters<typeof customFetch>[1]): Promise<PcDealPage> => {
+
+  return customFetch<PcDealPage>(getBrowsePcDealsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getBrowsePcDealsQueryKey = (params?: BrowsePcDealsParams,) => {
+    return [
+    `/api/games/pc-deals`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getBrowsePcDealsQueryOptions = <TData = Awaited<ReturnType<typeof browsePcDeals>>, TError = ErrorType<void>>(params: BrowsePcDealsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof browsePcDeals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBrowsePcDealsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof browsePcDeals>>> = ({ signal }) => browsePcDeals(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof browsePcDeals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type BrowsePcDealsQueryResult = NonNullable<Awaited<ReturnType<typeof browsePcDeals>>>
+export type BrowsePcDealsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Browse one additional page of verified PC deals on demand
+ */
+
+export function useBrowsePcDeals<TData = Awaited<ReturnType<typeof browsePcDeals>>, TError = ErrorType<void>>(
+ params: BrowsePcDealsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof browsePcDeals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getBrowsePcDealsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

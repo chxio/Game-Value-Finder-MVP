@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './browsePcDealsParams';
 export * from './game';
 export * from './gameCatalog';
 export * from './gameCatalogSummary';
@@ -17,3 +18,4 @@ export * from './gameSourceStatus';
 export * from './getGameCatalogParams';
 export * from './getGameCatalogSummaryParams';
 export * from './healthStatus';
+export * from './pcDealPage';
