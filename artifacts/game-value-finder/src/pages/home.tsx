@@ -159,9 +159,26 @@ function GameCard({ game, index }: { game: Game; index: number }) {
         </div>
 
         <div className="mb-4 flex items-center justify-between text-[11px] text-[#7d8799]">
-          <span>{game.reviewCount.toLocaleString()} {game.platform === GamePlatform.PC ? 'Steam reviews · snapshot rating' : `ratings · ${game.provider}`}</span>
+          <span>{game.reviewCount.toLocaleString()} {game.platform === GamePlatform.PC ? 'Steam reviews · snapshot' : `ratings · ${game.provider}`}</span>
           <span className="line-through">{formatMoney(game.originalPrice, game.currency)}</span>
         </div>
+        {game.platform === GamePlatform.PC && (
+          <div className="mb-4 rounded-lg border border-[#e5e8ef] bg-[#fbfcfd] px-3 py-2 text-[11px] text-[#657088]">
+            <p className="mb-1 font-semibold text-[#27334b]">Rating comparison</p>
+            {(game.ratings ?? []).map((rating) => (
+              <div key={rating.source} className="flex items-center justify-between gap-2 py-0.5">
+                <a href={rating.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-[#27334b]">
+                  {rating.source} {rating.audience === 'critics' ? '(critics)' : '(players)'}
+                </a>
+                <span className="shrink-0 font-mono">{rating.originalScore}/{rating.originalScale} · {rating.ratingOutOfFive.toFixed(1)}/5</span>
+              </div>
+            ))}
+            {!game.ratings?.some((rating) => rating.audience === 'critics') && (
+              <p className="py-0.5">Metacritic critic score not available for this game.</p>
+            )}
+            <p className="mt-1 border-t border-[#e5e8ef] pt-1">Value score uses {game.scoreBasis ?? 'Steam player reviews'} only; no critic/player average.</p>
+          </div>
+        )}
 
         <div className="flex gap-2">
           <a
@@ -450,7 +467,7 @@ function Home() {
               </div>
               <div className="mt-4 space-y-3 text-xs leading-relaxed text-[#748097]">
                 <div className="flex gap-2"><CircleDollarSign className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6e8500]" aria-hidden="true" /><span>Prices are from the US storefront in USD. Checkout prices may vary by location.</span></div>
-                <div className="flex gap-2"><BadgeCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6e8500]" aria-hidden="true" /><span>PC deal links go through CheapShark to Steam. Verify the price before buying; reviews open on Steam.</span></div>
+                <div className="flex gap-2"><BadgeCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6e8500]" aria-hidden="true" /><span>PC deal links go through CheapShark to Steam. Verify the price before buying; Steam player and optional Metacritic PC critic scores are shown separately on a 5-point display scale. The value ranking uses Steam only.</span></div>
               </div>
             </div>
 

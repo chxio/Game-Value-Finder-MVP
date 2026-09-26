@@ -68,6 +68,19 @@ function normalizedDeal(deal, details, verifiedAt) {
   if (!genres.length) return null;
   const discountPercent = Math.round((1 - price / normal) * 100);
   const rating = Math.round(ratingPercent * 5) / 100;
+  let criticScore = "";
+  let criticUrl = "";
+  if (Number.isInteger(details.metacritic?.score) && details.metacritic.score >= 1 &&
+    details.metacritic.score <= 100 && typeof details.metacritic.url === "string") {
+    try {
+      const url = new URL(details.metacritic.url);
+      if (url.protocol === "https:" && ["metacritic.com", "www.metacritic.com"].includes(url.hostname) &&
+        url.pathname.startsWith("/game/")) {
+        criticScore = details.metacritic.score;
+        criticUrl = url.href;
+      }
+    } catch { /* Invalid source link: omit the optional score. */ }
+  }
   return {
     appId,
     title: deal.title,
@@ -77,6 +90,8 @@ function normalizedDeal(deal, details, verifiedAt) {
     discountPercent,
     rating,
     reviewCount,
+    criticScore,
+    criticUrl,
     score: Math.round(((discountPercent * rating) / price) * 100) / 100,
     dealUrl: `https://www.cheapshark.com/redirect?dealID=${deal.dealID}`,
     storeUrl: `https://store.steampowered.com/app/${appId}`,
@@ -132,6 +147,8 @@ sheet.columns = [
   { header: "Discount %", key: "discountPercent", width: 15 },
   { header: "Steam rating (/5)", key: "rating", width: 20 },
   { header: "Steam review count", key: "reviewCount", width: 20 },
+  { header: "Metacritic critic score (/100)", key: "criticScore", width: 28 },
+  { header: "Metacritic link", key: "criticUrl", width: 54 },
   { header: "Dope score", key: "score", width: 16 },
   { header: "Deal link", key: "dealUrl", width: 48 },
   { header: "Steam store link", key: "storeUrl", width: 46 },
@@ -141,7 +158,7 @@ sheet.columns = [
   { header: "Price source", key: "source", width: 18 },
   { header: "Snapshot time (UTC)", key: "verifiedAt", width: 27 },
 ];
-sheet.autoFilter = { from: "A1", to: `P${unique.length + 1}` };
+sheet.autoFilter = { from: "A1", to: `R${unique.length + 1}` };
 sheet.getRow(1).height = 28;
 sheet.getRow(1).eachCell((cell) => {
   cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF202A40" } };
@@ -160,8 +177,9 @@ unique.forEach((deal, index) => {
     formula: `IFERROR(F${rowNumber}*G${rowNumber}/D${rowNumber},0)`,
     result: deal.score,
   };
-  for (const key of ["dealUrl", "storeUrl", "reviewUrl"]) {
+  for (const key of ["dealUrl", "storeUrl", "reviewUrl", "criticUrl"]) {
     const url = deal[key];
+    if (!url) continue;
     row.getCell(key).value = { text: url, hyperlink: url };
     row.getCell(key).font = { color: { argb: "FF3975A7" }, underline: true };
   }
@@ -184,6 +202,7 @@ const notes = [
   ["Source page", "https://apidocs.cheapshark.com/"],
   ["Store metadata", "Steam public app details endpoint; age and content descriptors screened"],
   ["Review rating", "CheapShark's Steam positive-review percentage, converted to a 5-point scale"],
+  ["Optional critic rating", "Metacritic PC critic score and link supplied by Steam game details; 0–100 divided by 20 for display only, not included in the Dope score."],
   ["Dope score", "(Discount percentage points × Steam rating out of 5) ÷ sale price in USD"],
   ["Important", "This is a dated snapshot, not a live price feed. Verify the current deal before buying."],
   ["Link policy", "Deal links go through CheapShark's redirect page as required by its API documentation."],

@@ -95,6 +95,17 @@ components:
     GameSourceStatus:
       type: string
       enum: [live, snapshot, unavailable]
+    GameRating:
+      type: object
+      description: An attributed component rating. Absence means no verified score was available, not zero.
+      required: [source, audience, originalScore, originalScale, ratingOutOfFive, url]
+      properties:
+        source: { type: string }
+        audience: { type: string, enum: [players, critics] }
+        originalScore: { type: number }
+        originalScale: { type: number }
+        ratingOutOfFive: { type: number }
+        url: { type: string }
     Game:
       type: object
       description: A discounted, paid offer with a verified matching storefront rating. Console offers currently use US storefront prices.
@@ -130,8 +141,15 @@ components:
         ratingOutOfFive: { type: number }
         reviewCount:
           type: integer
-          description: Exact number of player ratings on the linked storefront product page (Steam uses positive plus negative review totals).
+          description: Number of player ratings reported by the rating source when captured (PC workbook uses CheapShark's Steam review count; live Steam uses positive plus negative totals).
         dopeScore: { type: number }
+        ratings:
+          type: array
+          description: Available attributed rating components; editorial and player ratings are not averaged.
+          items: { $ref: "#/components/schemas/GameRating" }
+        scoreBasis:
+          type: string
+          description: Name of the rating source used in ratingOutOfFive and the value score.
     GameSource:
       type: object
       required: [name, url, status, detail]

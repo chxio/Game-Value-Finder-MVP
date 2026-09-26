@@ -50,8 +50,17 @@ export const GetGameCatalogResponse = zod.object({
   "originalPrice": zod.number(),
   "discountPercent": zod.number(),
   "ratingOutOfFive": zod.number(),
-  "reviewCount": zod.number().int().describe('Exact number of player ratings on the linked storefront product page (Steam uses positive plus negative review totals).'),
-  "dopeScore": zod.number()
+  "reviewCount": zod.number().int().describe('Number of player ratings reported by the rating source when captured (PC workbook uses CheapShark\'s Steam review count; live Steam uses positive plus negative totals).'),
+  "dopeScore": zod.number(),
+  "ratings": zod.array(zod.object({
+  "source": zod.string(),
+  "audience": zod.enum(['players', 'critics']),
+  "originalScore": zod.number(),
+  "originalScale": zod.number(),
+  "ratingOutOfFive": zod.number(),
+  "url": zod.string()
+}).describe('An attributed component rating. Absence means no verified score was available, not zero.')).optional().describe('Available attributed rating components; editorial and player ratings are not averaged.'),
+  "scoreBasis": zod.string().optional().describe('Name of the rating source used in ratingOutOfFive and the value score.')
 }).describe('A discounted, paid offer with a verified matching storefront rating. Console offers currently use US storefront prices.')),
   "sources": zod.array(zod.object({
   "name": zod.string(),

@@ -19,6 +19,8 @@ export type CatalogGame = {
   ratingOutOfFive: number;
   reviewCount: number;
   dopeScore: number;
+  ratings?: { source: string; audience: "players" | "critics"; originalScore: number; originalScale: number; ratingOutOfFive: number; url: string }[];
+  scoreBasis?: string;
 };
 
 type Source = {
@@ -66,6 +68,7 @@ type SteamDetails = {
     genres?: { description: string }[];
     categories?: { description: string }[];
     content_descriptors?: { ids?: number[] };
+    metacritic?: { score?: number; url?: string };
   };
 };
 
@@ -111,6 +114,21 @@ function isSafeGame(details: SteamDetails["data"], name: string): boolean {
   return !(details.content_descriptors?.ids ?? []).some((id) =>
     ADULT_DESCRIPTOR_IDS.has(id),
   );
+}
+
+export function metacriticRating(details: SteamDetails["data"]) {
+  const score = details?.metacritic?.score;
+  const url = details?.metacritic?.url;
+  if (!Number.isInteger(score) || score! < 1 || score! > 100 || !url) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" || !["www.metacritic.com", "metacritic.com"].includes(parsed.hostname) ||
+      !parsed.pathname.startsWith("/game/")) return null;
+  } catch {
+    return null;
+  }
+  return { source: "Metacritic", audience: "critics" as const, originalScore: score!, originalScale: 100,
+    ratingOutOfFive: Math.round(score! * 5) / 100, url };
 }
 
 async function getSteamDetails(id: number, region: string): Promise<SteamDetails["data"]> {
@@ -171,6 +189,12 @@ async function toGame(
     ratingOutOfFive,
     reviewCount: count,
     dopeScore,
+    scoreBasis: "Steam player reviews",
+    ratings: [
+      { source: "Steam player reviews", audience: "players", originalScore: Math.round(positive / count * 10000) / 100,
+        originalScale: 100, ratingOutOfFive, url: `https://steamcommunity.com/app/${item.id}/reviews/` },
+      ...[metacriticRating(details)].filter((rating): rating is NonNullable<typeof rating> => rating !== null),
+    ],
   };
 }
 
@@ -251,6 +275,12 @@ async function loadSteamCatalog(region: string): Promise<Catalog> {
         url: STEAM_REVIEWS_URL,
         status: "live",
         detail: "Lifetime positive share converted to a 5-point rating; not an editorial rating.",
+      },
+      {
+        name: "Metacritic critic scores via Steam",
+        url: "https://store.steampowered.com/api/appdetails",
+        status: "live",
+        detail: "Optional PC critic score and Metacritic link supplied by Steam app details. Only shown when the score and matching game metadata are available; not used in the value ranking.",
       },
       {
         name: "Riot Games",

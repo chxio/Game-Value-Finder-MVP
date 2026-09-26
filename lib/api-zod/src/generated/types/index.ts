@@ -10,6 +10,8 @@ export * from './game';
 export * from './gameCatalog';
 export * from './gameCatalogSummary';
 export * from './gamePlatform';
+export * from './gameRating';
+export * from './gameRatingAudience';
 export * from './gameSource';
 export * from './gameSourceStatus';
 export * from './getGameCatalogParams';

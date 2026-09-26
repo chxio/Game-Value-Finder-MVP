@@ -1,0 +1,9 @@
+# PC review score provenance
+
+The PC catalog served by `/api/games` comes from the manually refreshed Deals workbook. Its Steam player positive percentage is supplied by CheapShark's public [deals API](https://apidocs.cheapshark.com/), matched to a Steam app ID and screened against Steam's public app details. The workbook stores that rating and its capture time. The Steam review link on each card points to the game's player reviews. CheapShark asks API users to send deal traffic through its redirect links; the workbook does so.
+
+When Steam app details include a Metacritic object, the refresh saves its **PC critic score** and game-page link as a second, optional component. This is a critic aggregate, **not** a player rating or a numeric summary of forum comments. No Metacritic pages are scraped. The score is accepted only if it is an integer from 1 to 100, the link is an HTTPS Metacritic game page, and the app details belong to the requested Steam app ID. Games without it retain the Steam rating alone.
+
+For display, Steam's positive percentage is multiplied by 5/100, and the Metacritic critic score out of 100 is divided by 20; both are rounded to two decimal places. The original source score, scale and link are exposed in `ratings`. `ratingOutOfFive` and the value ranking **always use Steam player reviews only**, not an average across audiences. The exact formula is `(discount percentage points × Steam rating out of five) ÷ current USD price`; see the API's `dopeScore`. Ratings and prices in the workbook are dated snapshots, not live readings; check the source page before buying.
+
+The separate live Steam adapter uses Steam's public review-count endpoint for its player positive share and the same app-details Metacritic field for optional critic scores. Other forums without a licensed game-level numeric rating API are intentionally not assigned scores.

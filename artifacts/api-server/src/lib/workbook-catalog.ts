@@ -46,6 +46,9 @@ function parseGame(row: ExcelJS.Row, columns: Map<string, number>): CatalogGame 
   const storeUrl = field("Deal link");
   const reviewUrl = field("Review link");
   const imageUrl = field("Cover image");
+  const criticScoreText = field("Metacritic critic score (/100)");
+  const criticScore = Number(criticScoreText);
+  const criticUrl = field("Metacritic link");
 
   if (
     !/^\d+$/.test(id) ||
@@ -82,6 +85,16 @@ function parseGame(row: ExcelJS.Row, columns: Map<string, number>): CatalogGame 
     ratingOutOfFive,
     reviewCount,
     dopeScore,
+    scoreBasis: "Steam player reviews",
+    ratings: [
+      { source: "Steam player reviews", audience: "players", originalScore: Math.round(ratingOutOfFive * 20 * 100) / 100,
+        originalScale: 100, ratingOutOfFive, url: reviewUrl },
+      ...(criticScoreText && Number.isInteger(criticScore) && criticScore >= 1 && criticScore <= 100 &&
+        isApprovedLink(criticUrl, "www.metacritic.com", "/game/")
+        ? [{ source: "Metacritic", audience: "critics" as const, originalScore: criticScore,
+          originalScale: 100, ratingOutOfFive: Math.round(criticScore * 5) / 100, url: criticUrl }]
+        : []),
+    ],
   };
 }
 
@@ -148,6 +161,12 @@ async function readCatalog(): Promise<Catalog> {
         url: "https://steamcommunity.com/",
         status: "snapshot",
         detail: "Steam positive-review percentages supplied by CheapShark and converted to a 5-point rating.",
+      },
+      {
+        name: "Metacritic critic scores via Steam",
+        url: "https://store.steampowered.com/api/appdetails",
+        status: "snapshot",
+        detail: "Optional PC critic scores and links supplied by Steam when this workbook was captured. Displayed separately, never averaged into the Steam-based value ranking.",
       },
     ],
     refreshedAt: new Date(timestamp).toISOString(),

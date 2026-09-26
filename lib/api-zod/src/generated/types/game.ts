@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { GamePlatform } from './gamePlatform';
+import type { GameRating } from './gameRating';
 
 /**
  * A discounted, paid offer with a verified matching storefront rating. Console offers currently use US storefront prices.
@@ -24,7 +25,11 @@ export interface Game {
   originalPrice: number;
   discountPercent: number;
   ratingOutOfFive: number;
-  /** Exact number of player ratings on the linked storefront product page (Steam uses positive plus negative review totals). */
+  /** Number of player ratings reported by the rating source when captured (PC workbook uses CheapShark's Steam review count; live Steam uses positive plus negative totals). */
   reviewCount: number;
   dopeScore: number;
+  /** Available attributed rating components; editorial and player ratings are not averaged. */
+  ratings?: GameRating[];
+  /** Name of the rating source used in ratingOutOfFive and the value score. */
+  scoreBasis?: string;
 }
