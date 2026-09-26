@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { mkdir, rename } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { findRawgRating, rawgEnabled } from "../src/lib/rawg.mjs";
 
 const SOURCE_URL =
   "https://www.cheapshark.com/api/1.0/deals?storeID=1&onSale=1&pageSize=60&sortBy=DealRating&minimumReviewCount=100";
@@ -131,6 +132,19 @@ const unique = [...new Map(rows.map((row) => [row.appId, row])).values()]
 if (unique.length < 10) {
   throw new Error(`Only ${unique.length} verified, safe deals were found; existing workbook was not changed.`);
 }
+if (rawgEnabled()) {
+  for (let i = 0; i < unique.length; i += 3) {
+    await Promise.all(unique.slice(i, i + 3).map(async (deal) => {
+      try {
+        const rating = await findRawgRating(deal.appId, deal.title);
+        deal.rawgRating = rating?.originalScore ?? "";
+        deal.rawgUrl = rating?.url ?? "";
+      } catch (error) {
+        console.warn(`RAWG rating unavailable for ${deal.title}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }));
+  }
+}
 
 const workbook = new ExcelJS.Workbook();
 workbook.creator = "Game Value Finder";
@@ -149,6 +163,8 @@ sheet.columns = [
   { header: "Steam review count", key: "reviewCount", width: 20 },
   { header: "Metacritic critic score (/100)", key: "criticScore", width: 28 },
   { header: "Metacritic link", key: "criticUrl", width: 54 },
+  { header: "RAWG player rating (/5)", key: "rawgRating", width: 24 },
+  { header: "RAWG game link", key: "rawgUrl", width: 54 },
   { header: "Dope score", key: "score", width: 16 },
   { header: "Deal link", key: "dealUrl", width: 48 },
   { header: "Steam store link", key: "storeUrl", width: 46 },
@@ -158,7 +174,7 @@ sheet.columns = [
   { header: "Price source", key: "source", width: 18 },
   { header: "Snapshot time (UTC)", key: "verifiedAt", width: 27 },
 ];
-sheet.autoFilter = { from: "A1", to: `R${unique.length + 1}` };
+sheet.autoFilter = { from: "A1", to: `T${unique.length + 1}` };
 sheet.getRow(1).height = 28;
 sheet.getRow(1).eachCell((cell) => {
   cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF202A40" } };
@@ -177,7 +193,7 @@ unique.forEach((deal, index) => {
     formula: `IFERROR(F${rowNumber}*G${rowNumber}/D${rowNumber},0)`,
     result: deal.score,
   };
-  for (const key of ["dealUrl", "storeUrl", "reviewUrl", "criticUrl"]) {
+  for (const key of ["dealUrl", "storeUrl", "reviewUrl", "criticUrl", "rawgUrl"]) {
     const url = deal[key];
     if (!url) continue;
     row.getCell(key).value = { text: url, hyperlink: url };
@@ -203,6 +219,7 @@ const notes = [
   ["Store metadata", "Steam public app details endpoint; age and content descriptors screened"],
   ["Review rating", "CheapShark's Steam positive-review percentage, converted to a 5-point scale"],
   ["Optional critic rating", "Metacritic PC critic score and link supplied by Steam game details; 0–100 divided by 20 for display only, not included in the Dope score."],
+  ["Optional community rating", "RAWG player rating (0–5) is included only with approved API access and an exact Steam app-ID match from RAWG's store links. Not used in the Dope score."],
   ["Dope score", "(Discount percentage points × Steam rating out of 5) ÷ sale price in USD"],
   ["Important", "This is a dated snapshot, not a live price feed. Verify the current deal before buying."],
   ["Link policy", "Deal links go through CheapShark's redirect page as required by its API documentation."],

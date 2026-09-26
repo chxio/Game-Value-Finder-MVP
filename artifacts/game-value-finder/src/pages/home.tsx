@@ -182,7 +182,10 @@ function GameCard({ game, index, priceCapturedAt }: { game: Game; index: number;
             {!game.ratings?.some((rating) => rating.audience === 'critics') && (
               <p className="py-0.5">Metacritic critic score not available for this game.</p>
             )}
-            <p className="mt-1 border-t border-[#e5e8ef] pt-1">Value score uses {game.scoreBasis ?? 'Steam player reviews'} only; no critic/player average.</p>
+            {!game.ratings?.some((rating) => rating.source === 'RAWG community') && (
+              <p className="py-0.5">RAWG community rating not available for this game.</p>
+            )}
+            <p className="mt-1 border-t border-[#e5e8ef] pt-1">Value score uses {game.scoreBasis ?? 'Steam player reviews'} only; no ratings are averaged.</p>
           </div>
         )}
 
@@ -540,7 +543,7 @@ function Home() {
               </div>
               <div className="mt-4 space-y-3 text-xs leading-relaxed text-[#748097]">
                 <div className="flex gap-2"><CircleDollarSign className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6e8500]" aria-hidden="true" /><span>Prices are from the US storefront in USD. Checkout prices may vary by location.</span></div>
-                <div className="flex gap-2"><BadgeCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6e8500]" aria-hidden="true" /><span>PC deal links go through CheapShark to Steam. Verify the price before buying; Steam player and optional Metacritic PC critic scores are shown separately on a 5-point display scale. The value ranking uses Steam only.</span></div>
+                <div className="flex gap-2"><BadgeCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6e8500]" aria-hidden="true" /><span>PC deal links go through CheapShark to Steam. Verify the price before buying; Steam player, optional RAWG community player and Metacritic PC critic scores are shown separately with their original scales. The value ranking uses Steam only.</span></div>
               </div>
             </div>
 

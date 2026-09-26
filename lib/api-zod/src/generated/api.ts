@@ -59,7 +59,7 @@ export const GetGameCatalogResponse = zod.object({
   "originalScale": zod.number(),
   "ratingOutOfFive": zod.number(),
   "url": zod.string()
-}).describe('An attributed component rating. Absence means no verified score was available, not zero.')).optional().describe('Available attributed rating components; editorial and player ratings are not averaged.'),
+}).describe('An attributed component rating. Steam player positive share (0–100), optional RAWG community rating (0–5), and Metacritic PC critic score (0–100) are separate audiences/scales. RAWG is shown only after an exact Steam app-ID match via a store link. Absence means no verified score was available, not zero.')).optional().describe('Available attributed rating components; critic and player scores are not averaged. Optional RAWG player scores never affect the Steam-based value ranking.'),
   "scoreBasis": zod.string().optional().describe('Name of the rating source used in ratingOutOfFive and the value score.')
 }).describe('A discounted, paid offer with a verified matching storefront rating. Console offers currently use US storefront prices.')),
   "sources": zod.array(zod.object({
@@ -128,7 +128,7 @@ export const BrowsePcDealsResponse = zod.object({
   "originalScale": zod.number(),
   "ratingOutOfFive": zod.number(),
   "url": zod.string()
-}).describe('An attributed component rating. Absence means no verified score was available, not zero.')).optional().describe('Available attributed rating components; editorial and player ratings are not averaged.'),
+}).describe('An attributed component rating. Steam player positive share (0–100), optional RAWG community rating (0–5), and Metacritic PC critic score (0–100) are separate audiences/scales. RAWG is shown only after an exact Steam app-ID match via a store link. Absence means no verified score was available, not zero.')).optional().describe('Available attributed rating components; critic and player scores are not averaged. Optional RAWG player scores never affect the Steam-based value ranking.'),
   "scoreBasis": zod.string().optional().describe('Name of the rating source used in ratingOutOfFive and the value score.')
 }).describe('A discounted, paid offer with a verified matching storefront rating. Console offers currently use US storefront prices.')),
   "sources": zod.array(zod.object({

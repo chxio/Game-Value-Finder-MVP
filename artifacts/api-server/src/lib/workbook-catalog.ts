@@ -3,6 +3,7 @@ import { stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { logger } from "./logger";
 import type { Catalog, CatalogGame } from "./steam";
+import { rawgSource } from "./rawg.mjs";
 
 const workbookPath = fileURLToPath(new URL("../data/game-deals.xlsx", import.meta.url));
 const sourceUrl = "https://www.cheapshark.com/";
@@ -49,6 +50,9 @@ function parseGame(row: ExcelJS.Row, columns: Map<string, number>): CatalogGame 
   const criticScoreText = field("Metacritic critic score (/100)");
   const criticScore = Number(criticScoreText);
   const criticUrl = field("Metacritic link");
+  const rawgScoreText = field("RAWG player rating (/5)");
+  const rawgScore = Number(rawgScoreText);
+  const rawgUrl = field("RAWG game link");
 
   if (
     !/^\d+$/.test(id) ||
@@ -93,6 +97,11 @@ function parseGame(row: ExcelJS.Row, columns: Map<string, number>): CatalogGame 
         isApprovedLink(criticUrl, "www.metacritic.com", "/game/")
         ? [{ source: "Metacritic", audience: "critics" as const, originalScore: criticScore,
           originalScale: 100, ratingOutOfFive: Math.round(criticScore * 5) / 100, url: criticUrl }]
+        : []),
+      ...(rawgScoreText && Number.isFinite(rawgScore) && rawgScore > 0 && rawgScore <= 5 &&
+        isApprovedLink(rawgUrl, "rawg.io", "/games/")
+        ? [{ source: "RAWG community", audience: "players" as const, originalScore: rawgScore,
+          originalScale: 5, ratingOutOfFive: rawgScore, url: rawgUrl }]
         : []),
     ],
   };
@@ -168,6 +177,8 @@ async function readCatalog(): Promise<Catalog> {
         status: "snapshot",
         detail: "Optional PC critic scores and links supplied by Steam when this workbook was captured. Displayed separately, never averaged into the Steam-based value ranking.",
       },
+      rawgSource(games.some((game) => game.ratings?.some((rating) => rating.source === "RAWG community"))
+        ? "snapshot" : "unavailable"),
     ],
     refreshedAt: new Date(timestamp).toISOString(),
     message:

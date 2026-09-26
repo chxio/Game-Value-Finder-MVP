@@ -119,7 +119,7 @@ components:
       enum: [live, snapshot, unavailable]
     GameRating:
       type: object
-      description: An attributed component rating. Absence means no verified score was available, not zero.
+      description: An attributed component rating. Steam player positive share (0–100), optional RAWG community rating (0–5), and Metacritic PC critic score (0–100) are separate audiences/scales. RAWG is shown only after an exact Steam app-ID match via a store link. Absence means no verified score was available, not zero.
       required: [source, audience, originalScore, originalScale, ratingOutOfFive, url]
       properties:
         source: { type: string }
@@ -167,7 +167,7 @@ components:
         dopeScore: { type: number }
         ratings:
           type: array
-          description: Available attributed rating components; editorial and player ratings are not averaged.
+          description: Available attributed rating components; critic and player scores are not averaged. Optional RAWG player scores never affect the Steam-based value ranking.
           items: { $ref: "#/components/schemas/GameRating" }
         scoreBasis:
           type: string

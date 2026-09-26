@@ -1,5 +1,6 @@
 import { logger } from "./logger";
 import { getConsoleCatalog } from "./console-stores";
+import { findRawgRating, rawgEnabled, rawgSource } from "./rawg.mjs";
 
 type Platform = "PC" | "Xbox" | "PlayStation";
 
@@ -257,6 +258,18 @@ async function loadSteamCatalog(region: string): Promise<Catalog> {
     games.push(...batch.filter((game): game is CatalogGame => game !== null));
   }
   games.sort((a, b) => b.dopeScore - a.dopeScore);
+  if (rawgEnabled()) {
+    for (let index = 0; index < games.length; index += 3) {
+      await Promise.all(games.slice(index, index + 3).map(async (game) => {
+        try {
+          const rating = await findRawgRating(game.id, game.name);
+          if (rating) game.ratings?.push(rating);
+        } catch (error) {
+          logger.warn({ id: game.id, error }, "RAWG community rating unavailable");
+        }
+      }));
+    }
+  }
 
   return {
     platform: "PC",
@@ -282,6 +295,7 @@ async function loadSteamCatalog(region: string): Promise<Catalog> {
         status: "live",
         detail: "Optional PC critic score and Metacritic link supplied by Steam app details. Only shown when the score and matching game metadata are available; not used in the value ranking.",
       },
+      rawgSource(rawgEnabled() ? "live" : "unavailable"),
       {
         name: "Riot Games",
         url: "https://www.riotgames.com/en",

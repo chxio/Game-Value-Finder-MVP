@@ -28,7 +28,7 @@ export interface Game {
   /** Number of player ratings reported by the rating source when captured (PC workbook uses CheapShark's Steam review count; live Steam uses positive plus negative totals). */
   reviewCount: number;
   dopeScore: number;
-  /** Available attributed rating components; editorial and player ratings are not averaged. */
+  /** Available attributed rating components; critic and player scores are not averaged. Optional RAWG player scores never affect the Steam-based value ranking. */
   ratings?: GameRating[];
   /** Name of the rating source used in ratingOutOfFive and the value score. */
   scoreBasis?: string;

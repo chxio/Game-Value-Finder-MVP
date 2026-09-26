@@ -10,6 +10,7 @@ A value-ranked game-deals website comparing a dated PC deals snapshot and live c
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - The PC catalog is read from `artifacts/api-server/data/game-deals.xlsx`. Refresh it manually with `pnpm --filter @workspace/api-server run refresh:games`; the refresh uses one bounded CheapShark deals page and verifies safety/genres against public Steam metadata.
+- Optional RAWG player ratings: review the current [RAWG API terms](https://rawg.io/tos_api), [API landing page](https://rawg.io/apidocs) and [endpoint docs](https://api.rawg.io/docs/) for your actual use, obtain your own API key through RAWG, store it as the `RAWG_API_KEY` Replit secret and set the non-secret `RAWG_USAGE_APPROVED=true` only once usage rights are confirmed. The Terms page permits limited commercial use under its free tier, while the current API landing page says the Free plan is non-commercial; treat commercial use as requiring RAWG's confirmation or an appropriate plan. Do not enable it based on the Terms page alone. Refresh the workbook manually after enabling to capture ratings; disabling does not remove previously captured workbook values, so refresh again to remove them. No key or approval means no API requests.
 
 ## Stack
 
@@ -35,6 +36,7 @@ A value-ranked game-deals website comparing a dated PC deals snapshot and live c
 - The dope score uses percentage points, not a fractional discount: `(discountPercent × ratingOutOfFive) / currentPrice`. Prices currently use the US Steam storefront and USD, so scores are comparable within that currency only.
 - Paid sale items with at least 10 player reviews are eligible. Free-to-play titles have a zero denominator and are not scored.
 - PC pricing and Steam player-rating percentages are a dated CheapShark API snapshot (USD), not a live feed. The backend reads the workbook and reloads it when changed. It does not bulk-crawl or automatically poll the provider; deal links must use CheapShark redirects. The workbook covers one page, not the entire store.
+- RAWG game-level community ratings are optional, from its documented games and game-store endpoints. Search title only finds candidates; the exact Steam app ID in RAWG's HTTPS Steam store URL is required before a score and RAWG game link are shown. Minimum 10 votes; missing/invalid/unreachable scores remain absent. Steam positive-review share remains the only PC dope-score basis. RAWG and Metacritic are never averaged with it. The optional live adapter caches lookups for 24 hours; the main PC catalog is still a manual workbook snapshot.
 - Console deals and player ratings come from matching public official Xbox and PlayStation storefront pages. The US console catalog is a limited live subset cached for 15 minutes, not a full-store index. Never invent missing offers or scores.
 
 ## Product
