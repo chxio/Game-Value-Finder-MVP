@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "dgpey-Y8uzYxhnb7BczRz"
+uri = "file://artifacts/api-server/data/game-deals.xlsx"
+type = "table"
+title = "PC deals workbook"
+description = "29 verified games, USD prices and Steam review ratings, captured September 26, 2026. A dated snapshot used by the app backend."
+logical_id = "0a043884-d3f5-40a1-b228-333ad956a852"
+content_hash = "sha256:f07eb9ef9a24f871c53abebdc57cbee61853cee8c8d2e246349b2e168ac2e2c1"
+size = 16806
+mtime_ms = 1790407586272
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:bce1aba4-a47d-4e3a-9e29-637a68638bf0/0a043884-d3f5-40a1-b228-333ad956a852/ec96f3e5-5c8a-4ecb-aa96-62d056ad2b7f"
+storage_version_token = "1790407732895394"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

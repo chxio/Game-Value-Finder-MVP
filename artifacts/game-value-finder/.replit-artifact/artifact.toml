@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Game Value Finder"
+description = "A cross-platform game deals catalog that compares discounts, review quality, and current price with a transparent value score. Browse PC, Xbox, and PlayStation games by genre, and open official store and review sources."
+version = "1.0.0"
+id = "artifacts/game-value-finder"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22750
+
+[services.development]
+run = "pnpm --filter @workspace/game-value-finder run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/game-value-finder", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/game-value-finder/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22750"
+BASE_PATH = "/"

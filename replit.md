@@ -1,6 +1,6 @@
-# [Project name]
+# Game Value Finder
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A value-ranked game-deals website that compares live Steam discounts and player reviews, with transparent source status across PC, Xbox, and PlayStation.
 
 ## Run & Operate
 
@@ -9,7 +9,7 @@ _Replace the heading above with the project's name, and this line with one sente
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- The PC catalog is read from `artifacts/api-server/data/game-deals.xlsx`. Refresh it manually with `pnpm --filter @workspace/api-server run refresh:games`; the refresh uses one bounded CheapShark deals page and verifies safety/genres against public Steam metadata.
 
 ## Stack
 
@@ -22,23 +22,35 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/game-value-finder/src/pages/home.tsx` — catalog UI and platform/genre filters.
+- `artifacts/api-server/src/lib/workbook-catalog.ts` — reads the dated PC deal workbook and recomputes scores from its price and rating columns.
+- `artifacts/api-server/scripts/refresh-game-deals.mjs` — rebuilds the workbook from a bounded CheapShark browse page and verifies Steam metadata for adult-content exclusion.
+- `artifacts/api-server/src/lib/steam.ts` — official Steam feed adapter and console unavailable-source status.
+- `artifacts/api-server/src/routes/games.ts` — validated catalog and summary API routes.
+- `lib/api-spec/openapi.yaml` — API contract; regenerate clients after changing it.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The dope score uses percentage points, not a fractional discount: `(discountPercent × ratingOutOfFive) / currentPrice`. Prices currently use the US Steam storefront and USD, so scores are comparable within that currency only.
+- Paid sale items with at least 10 player reviews are eligible. Free-to-play titles have a zero denominator and are not scored.
+- PC pricing and Steam player-rating percentages are a dated CheapShark API snapshot (USD), not a live feed. The backend reads the workbook and reloads it when changed. It does not bulk-crawl or automatically poll the provider; deal links must use CheapShark redirects. The workbook covers one page, not the entire store.
+- The console storefronts are linked, but no reliable public price/review feed is connected. Do not invent prices or scores to fill these tabs.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Switch between PC, Xbox, and PlayStation; search, filter by genre, and browse games ranked by dope score.
+- Open each listed PC game's deal through CheapShark's required redirect to Steam and its Steam player-review page.
+- See provider status, refresh time, and unavailable-source explanations. Adult-only, explicit-content, and 18+ listings are excluded from the scored catalog.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Use publicly available information from official game providers and public review sources; exclude adult games.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- CheapShark's public API requires a descriptive User-Agent and deal-redirect links; it discourages automated bulk catalog harvesting. Keep workbook refreshes manual and bounded, and mark prices as a dated snapshot.
+- Steam app-detail responses can be inconsistent. Keep source attribution and fail closed when a listing cannot be verified.
+- A new OpenAPI response shape requires `pnpm --filter @workspace/api-spec run codegen` before frontend/server typechecks.
 
 ## Pointers
 
